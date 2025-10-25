@@ -1,26 +1,26 @@
 "use client";
-
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
+import * as React from "react";
+import { Calendar } from "@/components/ui/calendar";
 
 export function DatePicker({
   date,
-  setDate
+  setDate,
 }: {
   date?: Date;
   setDate: (d?: Date) => void;
 }) {
+  const [month, setMonth] = React.useState(date ?? new Date());
+
   return (
-    <div className="rounded-md border p-3">
-      <div className="text-xs font-medium mb-2">Date</div>
-      <DayPicker
-        mode="single"
-        selected={date}
-        onSelect={setDate}
-        weekStartsOn={1}
-        captionLayout="dropdown-buttons"
-      />
-    </div>
+    <Calendar
+      mode="single"
+      selected={date}
+      onSelect={setDate}
+      month={month}
+      onMonthChange={setMonth}
+      fromYear={new Date().getFullYear() - 10}
+      toYear={new Date().getFullYear() + 10}
+    />
   );
 }
 

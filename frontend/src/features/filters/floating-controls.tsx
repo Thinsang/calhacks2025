@@ -4,47 +4,134 @@ import { useAppState } from "@/lib/app-state";
 import { DatePicker } from "@/features/filters/widgets/date-picker";
 import { LocationInput } from "@/features/filters/widgets/location-input";
 import { PredictionCard } from "@/features/filters/widgets/prediction-card";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, MapPinIcon, ChevronDownIcon } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
 
 export function FloatingControls() {
   const { locationQuery, setLocationQuery, date, setDate } = useAppState();
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   return (
     <motion.div
-      initial={{ x: "-110%" }}
-      animate={{ x: 0 }}
-      transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
-      className="pointer-events-auto absolute top-6 left-6 z-10 w-[380px] max-w-[calc(100vw-3rem)] origin-top-left rounded-lg border bg-background/80 p-4 shadow-2xl shadow-primary/10 backdrop-blur-sm"
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        duration: 0.5, 
+        ease: [0.16, 1, 0.3, 1],
+        delay: 0.1
+      }}
+      className="pointer-events-auto absolute left-6 top-28 z-40 w-[420px] max-w-[calc(100vw-3rem)]"
     >
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Location</label>
-          <LocationInput value={locationQuery} onChange={setLocationQuery} />
+      <div className="glass-panel overflow-hidden rounded-3xl shadow-elevated">
+        {/* Header Section */}
+        <div className="border-b border-border/40 bg-gradient-to-br from-primary/[0.08] via-accent/[0.05] to-transparent px-6 py-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/20">
+              <CalendarIcon className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold tracking-tight">Traffic Prediction</h2>
+              <p className="text-xs text-muted-foreground">Plan your optimal location</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Date</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className="w-full justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <DatePicker date={date ?? undefined} setDate={(d) => setDate(d ?? null)} />
-            </PopoverContent>
-          </Popover>
-        </div>
+        {/* Controls Section */}
+        <div className="space-y-5 p-6">
+          {/* Location Input */}
+          <motion.div 
+            className="space-y-2.5"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/10">
+                <MapPinIcon className="h-3 w-3 text-primary" strokeWidth={2.5} />
+              </div>
+              Location
+            </label>
+            <LocationInput value={locationQuery} onChange={setLocationQuery} />
+          </motion.div>
 
-        <PredictionCard date={date ?? undefined} location={locationQuery} />
+          {/* Date Picker */}
+          <motion.div 
+            className="space-y-2.5"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/10">
+                <CalendarIcon className="h-3 w-3 text-primary" strokeWidth={2.5} />
+              </div>
+              Date
+            </label>
+            <Button
+              variant={"outline"}
+              className="hover-lift group relative h-12 w-full justify-between overflow-hidden border-border/60 bg-background/50 text-left font-normal shadow-soft transition-all hover:border-primary/40 hover:bg-background/80 hover:shadow-md"
+              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+            >
+              <span className="flex items-center gap-2.5">
+                {date ? (
+                  <>
+                    <span className="font-semibold">{format(date, "EEE, MMM d")}</span>
+                    <span className="text-xs text-muted-foreground/60">•</span>
+                    <span className="text-sm text-muted-foreground">{format(date, "yyyy")}</span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Select a date</span>
+                )}
+              </span>
+              <ChevronDownIcon className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isCalendarOpen ? 'rotate-180' : ''}`} />
+            </Button>
+            
+            <AnimatePresence>
+              {isCalendarOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="glass-light rounded-2xl p-4">
+                    <DatePicker
+                      date={date ?? undefined}
+                      setDate={(d) => {
+                        setDate(d ?? null);
+                        setIsCalendarOpen(false);
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Divider */}
+          <div className="relative py-3">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/30"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-background/80 px-3 text-xs font-medium text-muted-foreground/60 backdrop-blur-sm">PREDICTION</span>
+            </div>
+          </div>
+
+          {/* Prediction Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <PredictionCard date={date ?? undefined} location={locationQuery} />
+          </motion.div>
+        </div>
       </div>
     </motion.div>
   );

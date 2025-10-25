@@ -99,7 +99,21 @@ export default function MapView() {
   const mapStyle = resolvedTheme === "light" ? "mapbox://styles/mapbox/light-v11" : "mapbox://styles/mapbox/dark-v11";
 
   if (!token) {
-    return <div>Mapbox token required</div>; // Simplified from previous version
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-background">
+        <div className="glass-panel rounded-2xl p-8 text-center shadow-elevated">
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
+              <svg className="h-8 w-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">Mapbox Token Missing</h3>
+          <p className="text-sm text-muted-foreground">Please set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -121,8 +135,18 @@ export default function MapView() {
 
       {viewState.zoom < MIN_ZOOM_FOR_DATA && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="rounded-md bg-background/80 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-sm">
-            Zoom in to see foot traffic
+          <div className="glass-panel rounded-2xl px-6 py-4 shadow-elevated">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-sm font-semibold">Zoom in to view traffic</div>
+                <div className="text-xs text-muted-foreground">Get closer to see detailed data</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -158,10 +182,36 @@ export default function MapView() {
           closeOnClick={false}
           anchor="bottom"
           offset={20}
+          className="map-popup"
         >
-          <div className="text-xs">
-            <div className="font-bold">{popupInfo.name}</div>
-            <div>Busyness: {Math.round(popupInfo.avg_busyness)}/100</div>
+          <div className="glass-heavy min-w-[200px] overflow-hidden rounded-2xl border border-border/40 p-4 shadow-elevated">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold leading-tight">{popupInfo.name}</div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-border/40 bg-background/30 p-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Traffic Level</div>
+                <div className="mt-0.5 text-lg font-bold">{Math.round(popupInfo.avg_busyness)}</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <div 
+                  className={`h-2 w-2 rounded-full ${
+                    popupInfo.avg_busyness < 40 ? 'bg-blue-500' :
+                    popupInfo.avg_busyness < 65 ? 'bg-yellow-400' :
+                    'bg-red-500'
+                  }`}
+                />
+                <span className="text-xs font-medium text-muted-foreground">/100</span>
+              </div>
+            </div>
           </div>
         </Popup>
       )}

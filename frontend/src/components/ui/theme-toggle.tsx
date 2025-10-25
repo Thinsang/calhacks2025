@@ -13,11 +13,18 @@ export function ThemeToggle() {
   return (
     <button
       aria-label="Toggle theme"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background hover:bg-accent"
+      className="group relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-border/40 bg-background/50 shadow-soft backdrop-blur-sm transition-all hover:border-border hover:bg-background/80 hover:shadow-md active:scale-95"
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {/* Avoid hydration mismatch by rendering a stable icon until mounted */}
-      {!mounted ? <div className="h-4 w-4" /> : isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {!mounted ? (
+        <div className="h-5 w-5" />
+      ) : isDark ? (
+        <Sun className="h-5 w-5 text-amber-500 transition-transform group-hover:rotate-12 group-hover:scale-110" />
+      ) : (
+        <Moon className="h-5 w-5 text-indigo-600 transition-transform group-hover:-rotate-12 group-hover:scale-110" />
+      )}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
     </button>
   );
 }
