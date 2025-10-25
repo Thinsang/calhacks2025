@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "framer-motion": "^12.23.24"
+  }
+}
