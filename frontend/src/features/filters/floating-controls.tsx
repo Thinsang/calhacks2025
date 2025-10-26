@@ -120,7 +120,9 @@ export function FloatingControls() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <PredictionCard date={date ?? undefined} location={locationQuery} />
+            <div className="min-w-0">
+              <PredictionCard date={date ?? undefined} location={locationQuery} />
+            </div>
           </motion.div>
         </div>
       </div>

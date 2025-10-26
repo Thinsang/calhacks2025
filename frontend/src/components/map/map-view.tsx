@@ -1,6 +1,7 @@
 "use client";
 
 import Map, { Layer, Source, Popup } from "react-map-gl";
+import Image from "next/image";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef, LngLatBounds, MapLayerMouseEvent } from "react-map-gl";
@@ -156,6 +157,19 @@ export default function MapView() {
         mapRef.current?.getCanvas().style.setProperty("cursor", "pointer");
       }}
     >
+      {/* Brand Badge - top-left */}
+      <div className="pointer-events-none absolute left-2 top-2">
+        <Image
+          src="/logo.png"
+          alt="Foot Traffic Finder logo"
+          width={112}
+          height={112}
+          sizes="112px"
+          priority
+          className="h-28 w-28 object-contain"
+        />
+      </div>
+
       <div className="absolute right-2 top-2">
         <MapControls />
       </div>

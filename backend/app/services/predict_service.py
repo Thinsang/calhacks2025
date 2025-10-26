@@ -186,7 +186,7 @@ async def summarize_with_gemini(base: dict) -> str:
         wmod = float(feats.get("weather_modifier", 1.0))
         emod = float(feats.get("event_modifier", 1.0))
         lines = []
-        lines.append(f"Traffic is expected to be {label} ({score:.0f}/100) at {place_name}.")
+        lines.append(f"Traffic is expected to be {label} at {place_name}.")
         # Weather rationale
         if wmod < 0.9:
             lines.append("Weather may suppress foot traffic (chance of rain or less favorable conditions).")
@@ -217,12 +217,14 @@ async def summarize_with_gemini(base: dict) -> str:
         model = genai.GenerativeModel("gemini-1.5-flash")
         prompt = (
             "You are a helpful assistant for a food truck owner in San Francisco. "
-            "Provide a short 2-3 sentence summary that explains why the predicted traffic is at its level. "
-            "Use weather and events as rationale when relevant.\n\n"
-            f"Predicted Score: {score:.0f}/100 ({label}).\n"
+            "Write a concise but info-rich paragraph (3-5 sentences) explaining WHY the expected foot traffic level occurs. "
+            "Do NOT restate the numeric score. Mention specific weather values and named events when available. "
+            "If events list is empty, say there are no notable events. "
+            "If popular-times data exists, reference whether the selected hour is historically busy or quiet.\n\n"
+            f"Level: {label}.\n"
             f"Location: {place_name}.\n"
-            f"Weather snapshot: {temp}°C, {precip}mm precipitation (hourly).\n"
-            f"Nearby events: {events_titles}."
+            f"Weather: {temp}°C, {precip}mm precipitation (hourly).\n"
+            f"Events: {events_titles}."
         )
         response = await model.generate_content_async(prompt)
         return (response.text or "").strip() or _fallback()

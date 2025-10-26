@@ -101,31 +101,18 @@ export function PredictionCard({
 
     if (query.data) {
       const style = trafficStyles[query.data.label];
-      const Icon = style.icon;
-
       return (
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.25 }}
-          className={`overflow-hidden rounded-2xl border ${style.border} glass-light`}
+          className={`overflow-hidden rounded-2xl border ${style.border} glass-light min-w-0`}
         >
-          <div className="p-5">
-            {/* Header row with spacing to avoid overlap */}
-            <div className="mb-3 flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Predicted Traffic</p>
-                <div className={`flex items-center gap-2 ${style.text}`}>
-                  <Icon className="h-5 w-5" strokeWidth={2.5} />
-                  <h3 className="truncate text-lg font-bold">{query.data.label} <span className="text-muted-foreground">({Math.round(query.data.score)}/100)</span></h3>
-                </div>
-              </div>
-            </div>
-
-            {/* AI summary */}
-            <div className="rounded-xl bg-background/50 p-3 text-sm leading-relaxed text-foreground/90 max-h-40 overflow-auto">
+          <div className="p-5 min-w-0">
+            {/* AI summary (wrapped, constrained) */}
+            <div className="w-full max-w-full min-h-16 max-h-40 overflow-y-auto rounded-xl bg-background/50 p-3 text-sm leading-relaxed text-foreground/90">
               {query.data.summary ? (
-                <p className="whitespace-pre-wrap">{query.data.summary}</p>
+                <p className="whitespace-normal break-words hyphens-auto">{query.data.summary}</p>
               ) : (
                 <p className="text-muted-foreground">Generating summary…</p>
               )}
