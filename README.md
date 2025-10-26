@@ -1,11 +1,13 @@
 # Foot Traffic Finder
 
+Created by: Thinsang Tamanag, Michael Zheng, Simon Lamichhane
+
 A modern, data-driven web application that provides a live and predictive foot traffic map of San Francisco, designed to help food truck owners find optimal locations.
 
 ## Core Features
 
 -   **Live & Predictive Map:** A full-screen, interactive Mapbox map visualizing real-time and predicted foot traffic across San Francisco.
--   **Dynamic Visualization:** The map displays data as color-coded circles for individual locations, indicating busyness levels (e.g., "Not Busy," "Moderate," "Busy").
+-   **Dynamic Visualization:** The map displays a color-coded heat map indicating busyness levels from low to high.
 -   **Interactive Popups & Legend:** Hover over a location to see its name and busyness score. A clear legend explains the color-coding.
 -   **Prediction Engine:** Select a location and a future date to receive a foot traffic prediction based on historical data, weather, and local events.
 -   **AI-Powered Summaries:** An integrated Gemini model provides a concise, human-readable summary of the prediction.
@@ -17,7 +19,7 @@ A modern, data-driven web application that provides a live and predictive foot t
 
 ## Data Sources
 
--   **Foot Traffic:** Google Maps "Popular Times" data via the `populartimes` library.
+-   **Foot Traffic:** Google Maps "Popular Times" data (via OutScraper API or similar source).
 -   **Events:** Google Events API via SerpApi.
 -   **Weather:** Open-Meteo API.
 
@@ -39,15 +41,16 @@ pip install -r backend/requirements.txt
 
 # 4. Set up environment variables
 # Copy `backend/ENV.example` to `backend/.env` and fill in your API keys:
-# GOOGLE_MAPS_API_KEY (required for foot traffic)
-# SERPAPI_API_KEY (required for events)
-# GEMINI_API_KEY (required for AI summaries)
+# OUTSCRAPER_API_KEY (foot traffic)
+# SERPAPI_API_KEY (events)
+# GEMINI_API_KEY (AI summaries)
 
 # 5. Run the server
-uvicorn app.main:app --reload --port 8001 --app-dir backend
+cd backend
+uvicorn app.main:app --reload --port 8000
 ```
 
-The backend will be running at `http://localhost:8001`.
+The backend will be running at `http://localhost:8000`.
 
 ### 2. Frontend Setup
 
@@ -61,13 +64,15 @@ cd frontend
 npm install
 
 # 3. Set up environment variables
-# Copy `frontend/ENV.example` to `frontend/.env.local` and add your Mapbox token:
+# Create `frontend/.env.local` and add:
 # NEXT_PUBLIC_MAPBOX_TOKEN=pk.YOUR_MAPBOX_TOKEN_HERE
-# NEXT_PUBLIC_API_BASE=http://localhost:8001
+# NEXT_PUBLIC_API_BASE=http://localhost:8000
 
 # 4. Run the development server
-npx next dev -p 3001
+npm run dev
+# or specify the port explicitly
+npx next dev -p 3000
 ```
 
-The application will be accessible at `http://localhost:3001`.
+The application will be accessible at `http://localhost:3000`.
 
