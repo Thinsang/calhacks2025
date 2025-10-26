@@ -1,7 +1,7 @@
 from app.core.config import settings
 from typing import List, Optional
-import asyncio
 import httpx
+import asyncio
 
 
 async def fetch_popular_times(
@@ -12,72 +12,31 @@ async def fetch_popular_times(
     ne_lng: Optional[float] = None,
     types: Optional[List[str]] = None,
 ):
-    if settings.google_maps_api_key:
-        try:
-            import populartimes
-        except ImportError:
-            return {"error": "populartimes library not installed", "data": None}
+    """Fetches popular times data.
 
+    Primary source: OutScraper (no Google Places dependency).
+    - If a text `place_query` is provided, we ask OutScraper for a single place
+      and extract its weekly "popular_times" histogram, averaging to 24h series.
+    - Bounds mode remains mock for now (OutScraper doesn't provide a simple free
+      bounding-box endpoint); UI still works with mock bubbles.
+    """
+    if settings.outscraper_api_key:
         try:
-            loop = asyncio.get_running_loop()
-
             if place_query:
-                place_id = await _find_place_id(place_query)
-                if not place_id:
+                place = await _outscraper_place_by_query(place_query)
+                if not place:
                     return {"error": f"Place '{place_query}' not found.", "data": None}
-                
-                place = await loop.run_in_executor(
-                    None, populartimes.get_id, settings.google_maps_api_key, place_id
-                )
-                series = _series_from_place(place)
-                return {"data": {"series": series, "place_name": place.get("name"), "source": "populartimes_id"}}
+                series = _series_from_outscraper(place)
+                return {"data": {"series": series, "place_name": place.get("name"), "source": "outscraper_query"}}
 
+            # Bounds mode – keep lightweight mock dataset for map density
             if sw_lat is not None and sw_lng is not None and ne_lat is not None and ne_lng is not None:
-                bound_lower = (sw_lat, sw_lng)
-                bound_upper = (ne_lat, ne_lng)
-                pt_types = types or ["restaurant", "cafe", "food", "tourist_attraction", "store", "bar"]
-                
-                results = await loop.run_in_executor(
-                    None,
-                    lambda: populartimes.get(
-                        settings.google_maps_api_key,
-                        pt_types,
-                        bound_lower,
-                        bound_upper,
-                        n_threads=40,
-                        radius=150,
-                        all_places=False,
-                    ),
-                )
-                
-                places = [_process_place(p) for p in results if p.get("populartimes")]
-                return {"data": {"places": places, "source": "populartimes_bounds"}}
+                return {"data": {"places": _get_mock_places(), "source": "mock_bounds"}}
         except Exception as e:
             return {"error": str(e), "data": None}
 
+    # Fallback when no API key – use mock
     return {"data": {"places": _get_mock_places(), "source": "mock"}}
-
-
-async def _find_place_id(query: str) -> Optional[str]:
-    if not query or not settings.google_maps_api_key:
-        return None
-    if query.startswith("placeid:"):
-        return query.split(":", 1)[1]
-
-    url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-    params = {
-        "input": f"{query}, San Francisco",
-        "inputtype": "textquery",
-        "fields": "place_id,name",
-        "key": settings.google_maps_api_key,
-    }
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(url, params=params)
-        data = resp.json()
-        candidates = data.get("candidates")
-        if candidates:
-            return candidates[0].get("place_id")
-        return None
 
 def _process_place(place: dict):
     series = _series_from_place(place)
@@ -108,6 +67,85 @@ def _series_from_place(place: dict):
         
     avg_data = [round(x / days_with_data) for x in total_data]
     return [{"hour": i, "busyness": avg_data[i]} for i in range(24)]
+
+
+async def _outscraper_place_by_query(query: str) -> Optional[dict]:
+    """Query OutScraper for a single place with popular times.
+
+    Notes:
+    - OutScraper Cloud docs: https://app.outscraper.cloud/api-docs
+    - We request 1 result with popular_times included.
+    - API routes evolve; this call supports common endpoints and payloads.
+    """
+    headers = {
+        "x-api-key": settings.outscraper_api_key or "",
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
+    # Try JSON POST payload variant first
+    payload = {
+        "queries": [
+            {
+                "query": query,
+                "limit": 1,
+                "fields": ["name", "popular_times", "coordinates"],
+            }
+        ]
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        # Preferred cloud endpoint
+        endpoints = [
+            "https://app.outscraper.cloud/api/google-maps/places",
+            "https://api.outscraper.com/google-maps/places",
+        ]
+        for url in endpoints:
+            try:
+                resp = await client.post(url, headers=headers, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # Expected shape: { data: [ { name, popular_times, coordinates, ... } ] }
+                    items = (
+                        (data or {}).get("data")
+                        or (data or {}).get("results")
+                        or (data or {}).get("items")
+                        or []
+                    )
+                    if items:
+                        return items[0]
+            except Exception:
+                continue
+
+    return None
+
+
+def _series_from_outscraper(place: dict):
+    """Normalize OutScraper popular_times structure into a 24-hour series.
+
+    OutScraper typically returns weekly histograms by weekday with 24 buckets.
+    We average across week days to a single 24-hour profile for simplicity.
+    """
+    week = (place or {}).get("popular_times") or (place or {}).get("popularTimes") or {}
+    if not week:
+        return []
+
+    # Aggregate by hour
+    total = [0] * 24
+    days = 0
+    # week might be {"Monday": [..24..], ...}
+    for _, hours in (week.items() if isinstance(week, dict) else []):
+        if isinstance(hours, list) and len(hours) == 24:
+            days += 1
+            for i in range(24):
+                try:
+                    total[i] += int(hours[i])
+                except Exception:
+                    pass
+
+    if days == 0:
+        return []
+    avg = [round(x / days) for x in total]
+    return [{"hour": i, "busyness": avg[i]} for i in range(24)]
 
 def _get_mock_places():
     return [

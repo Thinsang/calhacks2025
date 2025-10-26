@@ -5,5 +5,4 @@ pydantic-settings==2.6.1
 scikit-learn==1.5.2
 numpy==2.1.2
 pandas==2.2.3
-git+https://github.com/m-wrzr/populartimes
 
