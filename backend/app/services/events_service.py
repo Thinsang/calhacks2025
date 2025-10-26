@@ -7,7 +7,8 @@ async def fetch_local_events(query: str, date_iso: str | None = None):
     if settings.serpapi_api_key:
         params = {
             "engine": "google_events",
-            "q": query if not date_iso else f"{query} {date_iso}",
+            # Bias the search to SF and the date text when present
+            "q": f"{query} San Francisco" if not date_iso else f"{query} San Francisco {date_iso[:10]}",
             "hl": "en",
             "gl": "us",
             "location": "San Francisco, California",
@@ -42,6 +43,15 @@ def _normalize_serpapi_events(payload: dict):
         address = ev.get("address")
         link = ev.get("link")
         venue = (ev.get("venue") or {}).get("name") if isinstance(ev.get("venue"), dict) else ev.get("venue")
+        # Estimate distance_km if lat/lng present
+        lat = None
+        lng = None
+        geo = ev.get("geo") or {}
+        try:
+            lat = float(geo.get("lat")) if geo.get("lat") is not None else None
+            lng = float(geo.get("lng")) if geo.get("lng") is not None else None
+        except Exception:
+            lat = lng = None
         if title:
             normalized.append(
                 {
@@ -50,6 +60,8 @@ def _normalize_serpapi_events(payload: dict):
                     "address": address,
                     "venue": venue,
                     "link": link,
+                    "latitude": lat,
+                    "longitude": lng,
                 }
             )
     return normalized

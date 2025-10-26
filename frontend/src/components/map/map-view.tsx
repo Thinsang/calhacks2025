@@ -14,6 +14,11 @@ import { useDebounce } from "@/lib/use-debounce";
 
 const SF_CENTER = { longitude: -122.44, latitude: 37.7749, zoom: 12.5 };
 const MIN_ZOOM_FOR_DATA = 12;
+// Rough San Francisco city bounds (SW and NE corners)
+const SF_BOUNDS: [[number, number], [number, number]] = [
+  [-122.58, 37.70], // SW (lng, lat)
+  [-122.35, 37.84]  // NE (lng, lat)
+];
 
 interface PopupInfo {
   longitude: number;
@@ -24,7 +29,7 @@ interface PopupInfo {
 
 export default function MapView() {
   const mapRef = useRef<MapRef | null>(null);
-  const { coords } = useAppState();
+  const { coords, heatmapDay, heatmapHour } = useAppState();
   const { resolvedTheme } = useTheme();
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || (typeof window !== "undefined" ? localStorage.getItem("mapbox_token") : null);
   
@@ -35,7 +40,7 @@ export default function MapView() {
   const debouncedBounds = useDebounce(bounds, 500); // Debounce bounds to avoid excessive refetching
 
   const traffic = useQuery({
-    queryKey: ["foot-traffic-bounds", debouncedBounds?.toArray()],
+    queryKey: ["foot-traffic-bounds", debouncedBounds?.toArray(), heatmapDay, heatmapHour],
     queryFn: async () => {
       if (!debouncedBounds) return { places: [] };
 
@@ -45,9 +50,11 @@ export default function MapView() {
         sw_lng: String(sw[0]),
         ne_lat: String(ne[1]),
         ne_lng: String(ne[0]),
+        dow: String(heatmapDay),
+        hour: String(heatmapHour)
       });
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001"}/api/foot-traffic?${qs.toString()}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000"}/api/foot-traffic?${qs.toString()}`);
       if (!res.ok) return { places: [] };
       const json = await res.json();
       return json.data || { places: [] };
@@ -122,13 +129,32 @@ export default function MapView() {
       {...viewState}
       onMove={evt => setViewState(evt.viewState)}
       onMoveEnd={() => setBounds(mapRef.current?.getBounds() ?? null)}
+      onLoad={() => setBounds(mapRef.current?.getBounds() ?? null)}
       mapStyle={mapStyle}
       style={{ width: "100%", height: "100%" }}
       mapboxAccessToken={token}
       ref={mapRef}
-      interactiveLayerIds={['traffic-circles']}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      maxBounds={SF_BOUNDS}
+      minZoom={11}
+      renderWorldCopies={false}
+      dragRotate={false}
+      interactiveLayerIds={["traffic-points"]}
+      onMouseMove={(e) => {
+        const f = e.features?.[0] as any;
+        if (!f) {
+          setPopupInfo(null);
+          mapRef.current?.getCanvas().style.setProperty("cursor", "");
+          return;
+        }
+        const coords = f.geometry?.coordinates || [0, 0];
+        setPopupInfo({
+          longitude: coords[0],
+          latitude: coords[1],
+          name: f.properties?.name,
+          avg_busyness: f.properties?.avg_busyness,
+        });
+        mapRef.current?.getCanvas().style.setProperty("cursor", "pointer");
+      }}
     >
       <div className="absolute right-2 top-2">
         <MapControls />
@@ -154,23 +180,56 @@ export default function MapView() {
 
       <Source id="traffic" type="geojson" data={geojson}>
         <Layer
-          id="traffic-circles"
+          id="traffic-heatmap"
+          type="heatmap"
+          paint={{
+            // Weight points by avg_busyness (0-100 -> 0-1)
+            "heatmap-weight": [
+              "interpolate", ["linear"], ["get", "avg_busyness"],
+              0, 0,
+              100, 1
+            ],
+            // Increase intensity with zoom so points blend into hotspots
+            "heatmap-intensity": [
+              "interpolate", ["linear"], ["zoom"],
+              11, 0.7,
+              13, 1.2,
+              15, 1.8
+            ],
+            // Continuous gradient: transparent -> blue -> red
+            "heatmap-color": [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0.0, "rgba(0, 0, 0, 0)",
+              0.5, "rgba(59, 130, 246, 1)",   // blue
+              1.0, "rgba(239, 68, 68, 1)"     // red
+            ],
+            // Larger radius with zoom so clusters blend smoothly
+            "heatmap-radius": [
+              "interpolate", ["linear"], ["zoom"],
+              11, 20,
+              13, 35,
+              15, 50
+            ],
+            // Translucent layer to keep streets/labels readable
+            "heatmap-opacity": 0.6
+          }}
+        />
+        <Layer
+          id="traffic-points"
           type="circle"
           paint={{
             "circle-radius": [
               "interpolate", ["linear"], ["zoom"],
-              MIN_ZOOM_FOR_DATA, ["interpolate", ["linear"], ["get", "avg_busyness"], 0, 3, 100, 10],
-              15, ["interpolate", ["linear"], ["get", "avg_busyness"], 0, 5, 100, 20],
+              12, 4,
+              16, 10
             ],
             "circle-color": [
-              "step", ["get", "avg_busyness"],
-              "#3b82f6", 40,
-              "#facc15", 65,
-              "#ef4444"
+              "interpolate", ["linear"], ["get", "avg_busyness"],
+              0, "#60A5FA",
+              40, "#F59E0B",
+              65, "#EF4444"
             ],
-            "circle-opacity": 0.8,
-            "circle-stroke-width": 1,
-            "circle-stroke-color": "#ffffff"
+            "circle-opacity": 0
           }}
         />
       </Source>

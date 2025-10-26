@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
     # Use a raw string env to avoid DotEnv JSON parsing errors for List[str]
     cors_allow_origins_raw: Optional[str] = None
-    cors_allow_origins: List[str] = ["http://localhost:3000", "*"]
+    cors_allow_origins: List[str] = ["http://localhost:3000"]
     open_meteo_base: str = "https://api.open-meteo.com/v1/forecast"
     serpapi_api_key: str | None = None
     eventbrite_token: str | None = None
@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _compute_origins(self):
         raw = self.cors_allow_origins_raw
+        # Prefer explicit RAW env var, otherwise allow common localhost ports
         if isinstance(raw, str) and raw.strip():
             v = raw.strip()
             try:
@@ -46,6 +47,15 @@ class Settings(BaseSettings):
             except Exception:
                 # keep default on parse issues
                 pass
+        else:
+            # Ensure typical dev ports are allowed by default
+            defaults = {"http://localhost:3000", "http://localhost:3001", "http://localhost:3002"}
+            self.cors_allow_origins = list({*self.cors_allow_origins, *defaults})
+        # Never allow wildcard when credentials may be used
+        try:
+            self.cors_allow_origins = [o for o in self.cors_allow_origins if o and o != "*"]
+        except Exception:
+            pass
         return self
 
 

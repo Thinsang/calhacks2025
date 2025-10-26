@@ -1,8 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAppState } from "@/lib/app-state";
 
 export function MapLegend() {
+  const qc = useQueryClient();
+  const { heatmapDay: day, setHeatmapDay: setDay, heatmapHour: hour, setHeatmapHour: setHour } = useAppState();
   const legendItems = [
     { 
       color: "bg-blue-500", 
@@ -42,7 +46,7 @@ export function MapLegend() {
         </div>
         <div>
           <h3 className="text-sm font-semibold">Traffic Levels</h3>
-          <p className="text-xs text-muted-foreground">Current density</p>
+          <p className="text-xs text-muted-foreground">Historical density</p>
         </div>
       </div>
       
@@ -70,6 +74,32 @@ export function MapLegend() {
             </div>
           </motion.div>
         ))}
+      </div>
+
+      {/* Time Filters */}
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          {["S","M","T","W","T","F","S"].map((label, idx) => (
+            <button
+              key={idx}
+              className={`h-7 w-7 rounded-md text-xs font-medium ${day === idx ? "bg-primary text-primary-foreground" : "bg-background/40"}`}
+              onClick={() => { setDay(idx); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min={8}
+            max={22}
+            value={hour}
+            onChange={(e) => { setHour(Number(e.target.value)); }}
+            className="w-full"
+          />
+          <span className="w-10 text-right text-xs text-muted-foreground">{hour}:00</span>
+        </div>
       </div>
     </motion.div>
   );

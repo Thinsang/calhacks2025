@@ -5,7 +5,6 @@ import { DatePicker } from "@/features/filters/widgets/date-picker";
 import { LocationInput } from "@/features/filters/widgets/location-input";
 import { PredictionCard } from "@/features/filters/widgets/prediction-card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, MapPinIcon, ChevronDownIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -13,7 +12,7 @@ import { useState } from "react";
 
 export function FloatingControls() {
   const { locationQuery, setLocationQuery, date, setDate } = useAppState();
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isCalendarOpen] = useState(true);
 
   return (
     <motion.div
@@ -24,29 +23,25 @@ export function FloatingControls() {
         ease: [0.16, 1, 0.3, 1],
         delay: 0.1
       }}
-      className="pointer-events-auto w-[360px] max-w-[calc(100vw-3rem)] sm:w-[380px]"
+      className="pointer-events-auto w-[420px] max-w-[calc(100vw-3rem)] sm:w-[500px] h-[60vh] min-h-[520px] max-h-[700px] overflow-hidden"
     >
-      <div className="glass-heavy overflow-hidden rounded-3xl shadow-elevated ring-1 ring-white/10">
-        {/* Header Section */}
-        <div className="border-b border-border/40 bg-gradient-to-br from-primary/[0.08] via-accent/[0.05] to-transparent px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/20">
-                <CalendarIcon className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2.5} />
-              </div>
-              <div>
-                <h2 className="text-base font-bold tracking-tight leading-tight">Traffic Prediction</h2>
-                <p className="text-[10px] text-muted-foreground">Plan your optimal location</p>
-              </div>
-            </div>
+      <div className="glass-panel flex h-full flex-col rounded-2xl p-4 shadow-elevated">
+        {/* Header Section (match Traffic Levels style) */}
+        <div className="mb-3 flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold">Traffic Prediction</h2>
+            <p className="text-xs text-muted-foreground">Plan your optimal location</p>
           </div>
         </div>
 
         {/* Controls Section */}
-        <div className="space-y-5 p-6">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-1">
           {/* Location Input */}
           <motion.div 
-            className="space-y-2 rounded-2xl border border-border/20 glass-light p-3 transition-colors"
+            className="space-y-1.5 rounded-xl border border-border/40 bg-background/30 p-2.5 backdrop-blur transition-colors"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -60,7 +55,7 @@ export function FloatingControls() {
 
           {/* Date Picker */}
           <motion.div 
-            className="space-y-2 rounded-2xl border border-border/20 glass-light p-3 transition-colors"
+            className="space-y-2 rounded-xl border border-border/40 bg-background/30 p-3 backdrop-blur transition-colors"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
@@ -71,8 +66,7 @@ export function FloatingControls() {
             </label>
             <Button
               variant={"outline"}
-              className="hover-lift group relative h-12 w-full justify-between overflow-hidden rounded-xl border-border/40 bg-background/60 text-left font-normal shadow-soft transition-all hover:border-primary/40 hover:bg-background/80 hover:shadow-md"
-              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+              className="hover-lift group relative h-10 w-full justify-between overflow-hidden rounded-xl border-border/40 bg-background/60 text-left text-sm font-medium shadow-soft transition-all hover:border-primary/40 hover:bg-background/80 hover:shadow-md"
             >
               <span className="flex items-center gap-2.5">
                 {date ? (
@@ -102,7 +96,6 @@ export function FloatingControls() {
                       date={date ?? undefined}
                       setDate={(d) => {
                         setDate(d ?? null);
-                        setIsCalendarOpen(false);
                       }}
                     />
                   </div>

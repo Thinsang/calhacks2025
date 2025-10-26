@@ -8,6 +8,7 @@ import { TrendingUpIcon, TrendingDownIcon, MinusIcon, SparklesIcon, LoaderIcon }
 type PredictResponse = {
   score: number;
   label: "Low" | "Medium" | "High";
+  summary?: string;
 };
 
 const trafficStyles = {
@@ -55,7 +56,7 @@ export function PredictionCard({
         qs.set("latitude", String(coords.latitude));
         qs.set("longitude", String(coords.longitude));
       }
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001"}/api/predict?${qs.toString()}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000"}/api/predict-llm?${qs.toString()}`);
       if (!res.ok) throw new Error("Prediction failed");
       return res.json();
     },
@@ -65,7 +66,7 @@ export function PredictionCard({
   const renderContent = () => {
     if (!location || !date) {
       return (
-        <div className="overflow-hidden rounded-2xl border border-border/20 glass-light p-8 text-center">
+        <div className="overflow-hidden rounded-2xl border border-border/20 glass-light p-9 text-center">
           <div className="mb-4 flex justify-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
               <SparklesIcon className="h-7 w-7 text-primary" strokeWidth={2} />
@@ -110,27 +111,24 @@ export function PredictionCard({
           className={`overflow-hidden rounded-2xl border ${style.border} glass-light`}
         >
           <div className="p-5">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Predicted Traffic
-                </p>
-                <div className={`flex items-baseline gap-2 ${style.text}`}>
-                  <h3 className="text-3xl font-bold">{query.data.label}</h3>
+            {/* Header row with spacing to avoid overlap */}
+            <div className="mb-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Predicted Traffic</p>
+                <div className={`flex items-center gap-2 ${style.text}`}>
                   <Icon className="h-5 w-5" strokeWidth={2.5} />
+                  <h3 className="truncate text-lg font-bold">{query.data.label} <span className="text-muted-foreground">({Math.round(query.data.score)}/100)</span></h3>
                 </div>
               </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${style.badge}`}>{Math.round(query.data.score)} / 100</span>
             </div>
 
-            {/* Progress Bar */}
-            <div className="mt-1 overflow-hidden rounded-full bg-muted/40">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${query.data.score}%` }}
-                transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                className={`h-1.5 rounded-full ${style.bg}`}
-              />
+            {/* AI summary */}
+            <div className="rounded-xl bg-background/50 p-3 text-sm leading-relaxed text-foreground/90 max-h-40 overflow-auto">
+              {query.data.summary ? (
+                <p className="whitespace-pre-wrap">{query.data.summary}</p>
+              ) : (
+                <p className="text-muted-foreground">Generating summary…</p>
+              )}
             </div>
           </div>
         </motion.div>

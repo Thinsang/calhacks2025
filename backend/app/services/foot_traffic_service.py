@@ -11,6 +11,10 @@ async def fetch_popular_times(
     ne_lat: Optional[float] = None,
     ne_lng: Optional[float] = None,
     types: Optional[List[str]] = None,
+    dow: Optional[int] = None,
+    hour: Optional[int] = None,
+    center_lat: Optional[float] = None,
+    center_lng: Optional[float] = None,
 ):
     """Fetches popular times data.
 
@@ -26,10 +30,16 @@ async def fetch_popular_times(
                 place = await _outscraper_place_by_query(place_query)
                 if not place:
                     return {"error": f"Place '{place_query}' not found.", "data": None}
-                series = _series_from_outscraper(place)
+                series = _series_from_outscraper(place, dow=dow, hour=hour)
                 return {"data": {"series": series, "place_name": place.get("name"), "source": "outscraper_query"}}
 
-            # Bounds mode – keep lightweight mock dataset for map density
+            # Nearby aggregate based on coordinates
+            if center_lat is not None and center_lng is not None:
+                agg = await _outscraper_nearby(center_lat, center_lng, dow=dow, hour=hour)
+                if agg:
+                    return {"data": {"series": agg, "place_name": "nearby aggregate", "source": "outscraper_nearby"}}
+
+            # Bounds mode – keep lightweight mock dataset for map density (still mock for now)
             if sw_lat is not None and sw_lng is not None and ne_lat is not None and ne_lng is not None:
                 return {"data": {"places": _get_mock_places(), "source": "mock_bounds"}}
         except Exception as e:
@@ -119,7 +129,7 @@ async def _outscraper_place_by_query(query: str) -> Optional[dict]:
     return None
 
 
-def _series_from_outscraper(place: dict):
+def _series_from_outscraper(place: dict, dow: Optional[int] = None, hour: Optional[int] = None):
     """Normalize OutScraper popular_times structure into a 24-hour series.
 
     OutScraper typically returns weekly histograms by weekday with 24 buckets.
@@ -129,10 +139,18 @@ def _series_from_outscraper(place: dict):
     if not week:
         return []
 
+    # If specific slot requested
+    if dow is not None and hour is not None and isinstance(week, dict):
+        days_order = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+        day_key = days_order[dow]
+        hours = week.get(day_key)
+        if isinstance(hours, list) and len(hours) == 24:
+            val = int(hours[hour]) if hours[hour] is not None else 0
+            return [{"hour": hour, "busyness": val}]
+
     # Aggregate by hour
     total = [0] * 24
     days = 0
-    # week might be {"Monday": [..24..], ...}
     for _, hours in (week.items() if isinstance(week, dict) else []):
         if isinstance(hours, list) and len(hours) == 24:
             days += 1
@@ -146,6 +164,65 @@ def _series_from_outscraper(place: dict):
         return []
     avg = [round(x / days) for x in total]
     return [{"hour": i, "busyness": avg[i]} for i in range(24)]
+
+
+async def _outscraper_nearby(lat: float, lng: float, dow: Optional[int] = None, hour: Optional[int] = None) -> Optional[list]:
+    """Query OutScraper for nearby places and return an aggregated series/slot.
+
+    If dow+hour are provided, return a single-element series for that slot averaged across nearby places.
+    Otherwise, average across week-days to a 24-hour profile.
+    """
+    headers = {
+        "x-api-key": settings.outscraper_api_key or "",
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
+    payload = {
+        "queries": [
+            {
+                "lat": lat,
+                "lng": lng,
+                "radius": 600,  # meters
+                "limit": 10,
+                "fields": ["name", "popular_times", "coordinates"],
+            }
+        ]
+    }
+    async with httpx.AsyncClient(timeout=30) as client:
+        for url in [
+            "https://app.outscraper.cloud/api/google-maps/places",
+            "https://api.outscraper.com/google-maps/places",
+        ]:
+            try:
+                resp = await client.post(url, headers=headers, json=payload)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                items = (data or {}).get("data") or (data or {}).get("results") or (data or {}).get("items") or []
+                if not items:
+                    continue
+                # Aggregate popular times across results
+                collector = []
+                for it in items:
+                    arr = _series_from_outscraper(it, dow=dow, hour=hour)
+                    if arr:
+                        collector.append(arr)
+                if not collector:
+                    return None
+                if dow is not None and hour is not None:
+                    # Single slot arrays like [{hour, busyness}]
+                    val = round(sum(a[0]["busyness"] for a in collector) / len(collector))
+                    return [{"hour": hour, "busyness": val}]
+                # 24-element per place
+                merged = [0] * 24
+                for arr in collector:
+                    for i in range(24):
+                        merged[i] += arr[i]["busyness"]
+                avg = [round(x / len(collector)) for x in merged]
+                return [{"hour": i, "busyness": avg[i]} for i in range(24)]
+            except Exception:
+                continue
+    return None
 
 def _get_mock_places():
     return [
