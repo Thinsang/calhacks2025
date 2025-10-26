@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { MapControls } from "./map-controls";
 import { MapLegend } from "./map-legend";
+import { FloatingControls } from "@/features/filters/floating-controls";
 import { useDebounce } from "@/lib/use-debounce";
 
 const SF_CENTER = { longitude: -122.44, latitude: 37.7749, zoom: 12.5 };
@@ -218,6 +219,10 @@ export default function MapView() {
 
       <div className="absolute bottom-4 left-4">
         <MapLegend />
+      </div>
+
+      <div className="absolute bottom-4 right-4">
+        <FloatingControls />
       </div>
     </Map>
   );

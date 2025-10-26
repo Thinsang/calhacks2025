@@ -65,18 +65,14 @@ export function PredictionCard({
   const renderContent = () => {
     if (!location || !date) {
       return (
-        <div className="overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-muted/30 to-transparent p-8 text-center">
+        <div className="overflow-hidden rounded-2xl border border-border/20 glass-light p-8 text-center">
           <div className="mb-4 flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
               <SparklesIcon className="h-7 w-7 text-primary" strokeWidth={2} />
             </div>
           </div>
-          <p className="text-sm font-medium text-foreground/90">
-            Ready to predict traffic
-          </p>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Select a location and date above
-          </p>
+          <p className="text-sm font-semibold">Ready to predict traffic</p>
+          <p className="mt-1.5 text-xs text-muted-foreground">Select a location and date above</p>
         </div>
       );
     }
@@ -108,10 +104,10 @@ export function PredictionCard({
 
       return (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-          className={`overflow-hidden rounded-2xl border ${style.border} bg-gradient-to-br ${style.gradient}`}
+          transition={{ duration: 0.25 }}
+          className={`overflow-hidden rounded-2xl border ${style.border} glass-light`}
         >
           <div className="p-5">
             <div className="mb-4 flex items-start justify-between">
@@ -124,33 +120,16 @@ export function PredictionCard({
                   <Icon className="h-5 w-5" strokeWidth={2.5} />
                 </div>
               </div>
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${style.bg}`}>
-                <Icon className={`h-6 w-6 ${style.text}`} strokeWidth={2.5} />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-current opacity-60"></div>
-                <span className="text-xs text-muted-foreground">
-                  Confidence Score
-                </span>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${style.badge}`}>
-                {Math.round(query.data.score)}/100
-              </span>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${style.badge}`}>{Math.round(query.data.score)} / 100</span>
             </div>
 
             {/* Progress Bar */}
-            <div className="mt-3 overflow-hidden rounded-full bg-background/50">
+            <div className="mt-1 overflow-hidden rounded-full bg-muted/40">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${query.data.score}%` }}
                 transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
                 className={`h-1.5 rounded-full ${style.bg}`}
-                style={{
-                  background: `linear-gradient(90deg, currentColor, transparent)`,
-                }}
               />
             </div>
           </div>

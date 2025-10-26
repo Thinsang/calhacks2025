@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { FloatingControls } from "@/features/filters/floating-controls";
 
 const MapView = dynamic(() => import("@/components/map/map-view"), { ssr: false });
 
@@ -35,7 +34,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <FloatingControls />
+      
     </div>
   );
 }
